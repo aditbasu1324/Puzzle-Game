@@ -1,2 +1,57 @@
 # Puzzle-Game
-A mathematical puzzle
+A mathematical puzzle game.
+
+## Description of the Puzzle
+
+Start of at x=S, need to get to T or above in n turns. At each step you go up with 100+kd with prob p or go down to 100-d with prob q. Can't go below L. What are the optimal bet sizes to maximise probability of reaching T?
+
+## Solution Through Simple Example
+
+This can be solved by recursive backtracking.
+
+First consider S=100, T=250, L=0, k=1, p=1/2, n=5,  case
+
+At turn n, score 1 if x>=250 score 0 if x<250
+Then at turn n-1, x>=250 is score 1, (bet 0), 250>x>=125 score is 1/2 bet double, x<125 score 0.
+
+At turn n-2, look at the turn n-1 only to figure out the other scores
+
+For x<250/4, winning or losing guarantees x<125 in turn 4. Therefore score is 0
+For 250/4<=x<125, losing guarantees x<125 while winning can result in 250>x>=125. Therefore score is 1/2(1/2+0)=1/4.
+For 125<=x<250*3/4, you can guarantee staying in 250>=x>125 by putting a small enough bet or you can take a large bet where either x>=250 or x<125. Either way score is 1/2 i.e need to win on second turn or need to win on first turn.
+For 250*3/4<=x<250, you can stay in 250>x>=125 with a loss or move into x>=250 with a bet, i.e score is 3/4. Here x
+For x>=250, score is 1, bet 0
+
+This process continues, note that the general pattern is the interval [250*p to 250*(p+1/2^n)) has probability s=p/2^n. 
+So 100 has prob 12/32.
+
+The bets being made are for x in [250*s to 250*(s+1/2^n)), If the numerator s is odd i.e $s=(2k+1)/2**n$, bet 250*(s+1/2^n)-x so you can move into a better interval for the future round and if the numerator of s is even, bet 0. This keeps you in the requisite ranges for the next turn. 
+
+## Generalizing Solution
+To extend this problem, for any k, 250/(k+1) would be a decision boundary on the n-1 turn and the respective bet would be (250-250/(k+1))/k, so winning gets you to exactly 250 and losing to exactly 0. Note that the probability of winning at the decision boundary is p. 
+
+Note that each lower decision boundary is associated with a probability value in general. i.e for x>=d, p>=d_{p}, so for any x, the probability is obtained by finding the maximum d where this rule applies, and then getting its associated d_p.
+
+On the n-2'th turn, the new decision boundaries would be $(l*k+u)/(k+1)$ where l, u are the upper and lower boundaries on the (n-1)'th turn and the respective probabilities are l_p*(1-p)+u_p*(p) where l_p, u_p were the upper and lower probablity estimates on the previous turn. 
+
+These boundaries start at 0,T and 0,1, Then these formulas are recursed through for N turns where for each pair of lower, upper intervals, a new decision boundary is created between the pair of numbers.
+
+Basically, if the index has an odd numerator (the index starting from 0 of what decision boundary it is, not the actual value of the decision boundary), create a bet that reaches the max of the interval (which gets you into the start of the next region), otherwise bet 0.
+
+For 11/32, the backtracking process is 6/16, 5/16, 6/16 gives 3/8, 3/8 5/16 gives 3/8, 2/8.
+i.e 11 branches into 6,5 into 3,3,3,2 into 2,1,2,1,2,1,1,1.
+
+If x>=L is needed for some minimum threshold L, subtract L from S,T such that L is 0 and then use the same algorithm 
+
+The results of the code are printed out one branch at a time, the scenario where S rises shows up before S falls.
+
+## Visualizing Solution
+
+In order to visualise the solution more clearly, it is best to create a diagram where new boundaries are added at each term instead of keeping the old decision boundaries.
+
+## Limitations 
+the code is O(2^{N}) 
+Furthermore, it doesn't account for floating point/numerical issues. This code is purely based on theoretical understanding of the algorithm.
+This leads to code bets not having the desired effect and potential generalization issues.
+
+
