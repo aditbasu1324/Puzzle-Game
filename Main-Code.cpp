@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <cmath>
 
 using namespace std;
 vector<int> vector_power(int exponent)
@@ -19,58 +20,62 @@ vector<int> vector_power(int exponent)
 }
 
 // this function finds the bets to make 
-void create_betting(int mid, int N, vector<double>& bets, const vector<vector<double>>& all_probabilities, const vector<vector<double>>& all_values, double k, double S)
+void create_betting(int mid, int N, vector<long long>& bets, const vector<vector<double>>& all_probabilities, const vector<vector<long long>>& all_values, long long k_num, long long k_den, long long S)
 {
     // the results of the code are printed out one branch at a time due to the nature of the code
     if (N==0) return;
     if (mid%2==1)
     {
-        double bet{(all_values[N][mid+1]-S)/k};
+        // bet to get value above above all_values[N][mid] i.e (all_values[N]-mid)/k rounded up
+        long long bet{((all_values[N][mid+1]-S)*k_den-1)/k_num+1};
         cout << "Turn" << N << '\n';
-        cout << "Current value" << S << '\n';
+        cout << "Current value: " << S/100 << '.'<< S%100 << '\n';
         cout << "Probability of success: " << all_probabilities[N][mid] << '\n';
-        cout << "Bet is: " << bet << '\n';
+        cout << "Bet is: " << bet/100 << '.' << bet%100 << '\n';
         bets.push_back(bet);
-        create_betting(mid/2+1, N-1, bets, all_probabilities,  all_values, k, S+k*bet);
-        create_betting(mid/2, N-1, bets, all_probabilities, all_values, k, S-bet);
+        // add k*bet 
+        create_betting(mid/2+1, N-1, bets, all_probabilities,  all_values, k_num, k_den, llround(S+(k_num*bet)/k_den));
+        create_betting(mid/2, N-1, bets, all_probabilities, all_values, k_num, k_den, S-bet);
     }
     else
     {
-        double bet{0};
+        long long bet{0};
         cout << "Turn" << N << '\n';
-        cout << "Current value" << S << '\n';
+        cout << "Current value: " << S/100 << '.'<< S%100 << '\n';
         cout << "Probability of success: " << all_probabilities[N][mid] << '\n';
-        cout << "Bet is: " << bet << '\n';
+        cout << "Bet is: " << bet/100 << '.' << bet%100 << '\n';
         bets.push_back(bet);
-        create_betting(mid/2, N-1, bets, all_probabilities, all_values,k, S+k*bet);
-        create_betting(mid/2, N-1, bets, all_probabilities, all_values,k, S-bet);
+        create_betting(mid/2, N-1, bets, all_probabilities, all_values,k_num, k_den, llround(S+(k_num*bet)/k_den));
+        create_betting(mid/2, N-1, bets, all_probabilities, all_values,k_num, k_den, S-bet);
     }
 }
 
 // this approach is useful for multiple starting points of S since for each S you get an answer
-void betting_game_grid(double S, double T, double p,double k,int N)
+void betting_game_grid(long long S, long long T, long long k_num,long long k_den,double p, int N)
 {
     // note that the size of the interval grid is 2**N+1
     vector<int> powers {vector_power(N)};
-    vector<double> intervals(powers[N]);
-    vector<double> current_values {0, static_cast<double>(T)};
+    vector<long long> intervals(powers[N]);
+    vector<long long> current_values {0, T};
     vector<double> current_probabilities {0,1};
     intervals[static_cast<size_t>(powers[N]-1)]=T;
     int i{0};
     // note that all probabilities will need to be stored when tracing back the bets or the loops
     vector<vector<double>> all_probabilities{};
-    vector<vector<double>> all_values{};
+    vector<vector<long long>> all_values{};
     all_probabilities.push_back(current_probabilities);
     all_values.push_back(current_values);
     while(i<N)
     {
-        vector<double> new_values{};
+        vector<long long> new_values{};
         vector<double> new_probabilities {};
         int current_size {static_cast<int>(current_values.size())};  
         for (int j{0}; j<current_size-1; j++)
         {
             new_values.push_back(current_values[j]);
-            new_values.push_back((current_values[j]*k+current_values[j+1])/(k+1));
+            // this is the l+(u-l)/(k+1) step where second term is rounded up in order to stay in the range in case of loss
+            // the -1, +1  ensure the rounding up occurs (as k_den+k_num>1)
+            new_values.push_back(current_values[j]+((current_values[j+1]-current_values[j])*k_den-1)/(k_den+k_num)+1);
             new_probabilities.push_back(current_probabilities[j]);
             new_probabilities.push_back(current_probabilities[j]*(1-p)+current_probabilities[j+1]*p);
         }
@@ -106,7 +111,7 @@ void betting_game_grid(double S, double T, double p,double k,int N)
     cout << "Probability of overall success: " <<  probability << '\n';
     // once you get the index and the probabilities, the bets can be backtracked
     // to find the bets use the index mid, need to know odd or even throughout
-    vector<double> bets{};
+    vector<long long> bets{};
     // print out all probabilities and all_values for a clearer picture
     for (int i{N}; i>=0; i--)
     {
@@ -125,7 +130,7 @@ void betting_game_grid(double S, double T, double p,double k,int N)
         }
         cout << '\n';
     }
-    create_betting(mid,N,bets,all_probabilities, all_values, k, S);
+    create_betting(mid,N,bets,all_probabilities, all_values, k_num, k_den, S);
 }
 
 int main()
@@ -133,8 +138,11 @@ int main()
     double S{80};
     double T{250};
     double p{0.75};
-    double k{2};
     int N{3};
-    betting_game_grid(S,T,p,k,N);
+    long long S_cents = llround(S*100);
+    long long T_cents = llround(T*100);
+    long long k_num{5};
+    long long k_den{6};
+    betting_game_grid(S_cents,T_cents,k_num, k_den, p, N);
 }
 
